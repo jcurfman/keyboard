@@ -19,7 +19,7 @@ const uint16_t KEYS[][NUM_COLUMNS] = {
   {KEY_TILDE, KEY_BACKSPACE, KEY_EQUAL, KEY_MINUS, KEY_0, KEY_9, KEY_ESC, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8},
   {KEY_DELETE, KEY_BACKSLASH, KEY_RIGHT_BRACE, KEY_LEFT_BRACE, KEY_P, KEY_O, KEY_TAB, KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I},
   {KEY_PAGE_UP, KEY_ENTER, 0, KEY_QUOTE, KEY_SEMICOLON, KEY_L, KEY_CAPS_LOCK, KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K},
-  {KEY_PAGE_DOWN, KEY_UP, MODIFIERKEY_RIGHT_SHIFT, KEY_COMMA, KEY_SLASH, KEY_PERIOD, MODIFIERKEY_LEFT_SHIFT, 0, KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M},
+  {KEY_PAGE_DOWN, KEY_UP, MODIFIERKEY_RIGHT_SHIFT, KEY_SLASH, KEY_PERIOD, KEY_COMMA, MODIFIERKEY_LEFT_SHIFT, 0, KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M},
   {KEY_RIGHT, KEY_DOWN, KEY_LEFT, MODIFIERKEY_RIGHT_CTRL, MODIFIERKEY_RIGHT_ALT, 0, MODIFIERKEY_LEFT_CTRL, MODIFIERKEY_LEFT_GUI, MODIFIERKEY_LEFT_ALT, 0, 0, 0, KEY_SPACE, 0, 0} // key 5 is fn
 };
 
@@ -44,7 +44,7 @@ void setup() {
   }
 
   // Keyboard
-//  Keyboard.begin();
+  Keyboard.begin();
 
   // Debugging
   Serial.begin(9600);
@@ -61,8 +61,10 @@ void loop() {
       buttons[i].update();
       if (buttons[i].rose()) {
         printRowColumn("Rose", row, column);
+        Keyboard.release(KEYS[row][column]);
       } else if (buttons[i].fell()) {
         printRowColumn("Fell", row, column);
+        Keyboard.press(KEYS[row][column]);
       }
     }
 
