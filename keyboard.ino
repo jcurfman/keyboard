@@ -23,6 +23,16 @@ const uint16_t KEYS[][NUM_COLUMNS] = {
   {KEY_RIGHT, KEY_DOWN, KEY_LEFT, MODIFIERKEY_RIGHT_CTRL, MODIFIERKEY_RIGHT_ALT, 0, MODIFIERKEY_LEFT_CTRL, MODIFIERKEY_LEFT_GUI, MODIFIERKEY_LEFT_ALT, 0, 0, 0, KEY_SPACE, 0, 0} // key 5 is fn
 };
 
+const uint16_t FN_KEYS[][NUM_COLUMNS] = {
+  {0, 0, KEY_F12, KEY_F11, KEY_F10, KEY_F9, 0, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {0, KEY_PAGE_UP, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {KEY_END, KEY_PAGE_DOWN, KEY_HOME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+};
+
+boolean fnPressed = false;
+
 Bounce* buttons = new Bounce[NUM_COLUMNS * NUM_ROWS];
 
 byte keys[NUM_COLUMNS][NUM_ROWS];
@@ -61,10 +71,25 @@ void loop() {
       buttons[i].update();
       if (buttons[i].rose()) {
         printRowColumn("Rose", row, column);
-        Keyboard.release(KEYS[row][column]);
+        if (isFnKey(row, column)) {
+          // TODO: need to release all of the fn keys?
+          fnPressed = false;
+        } else {
+          uint16_t key = keyCode(row, column);
+          if (key != 0) {
+            Keyboard.release(key);
+          }
+        }
       } else if (buttons[i].fell()) {
         printRowColumn("Fell", row, column);
-        Keyboard.press(KEYS[row][column]);
+        if (isFnKey(row, column)) {
+          fnPressed = true;
+        } else {
+          uint16_t key = keyCode(row, column);
+          if (key != 0) {
+            Keyboard.press(key);
+          }
+        }
       }
     }
 
@@ -82,6 +107,24 @@ void loop() {
 // so this function identifies a single keyboard key in the buttons array.
 uint8_t buttonIndex(uint8_t row, uint8_t column) {
   return row * NUM_COLUMNS + column;
+}
+
+// Returns whether the key at the given row and column is the function key.
+boolean isFnKey(uint8_t row, uint8_t column) {
+  return row == 4 && column == 5;
+}
+
+// Returns the key code of the given row and column - 0 if no key is mapped.
+uint16_t keyCode(uint8_t row, uint8_t column) {
+  if (fnPressed) {
+    uint16_t key = FN_KEYS[row][column];
+    // fall back to the regular key map if there's no function for the key
+    if (key != 0) {
+      return key;
+    }
+  }
+  
+  return KEYS[row][column];
 }
 
 void printRowColumn(String action, uint8_t row, uint8_t column) {
