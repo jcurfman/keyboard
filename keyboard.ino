@@ -4,17 +4,26 @@
 // Rows (top to bottom) are wired to pins 0-4
 // Columns (left to right) are wired to 5-10 and 15-23
 
+//#include <Keyboard.h>
 #include <Bounce2.h>
 
-#define LED_PIN 13
 #define NUM_ROWS 5
 #define NUM_COLUMNS 15
-#define BUTTON_INTERVAL_MS 25
+#define BUTTON_INTERVAL_MS 5 // Debounce time.  Cherry claims 5ms: https://geekhack.org/index.php?topic=42385.0
 
 const uint8_t ROW_PINS[NUM_ROWS] = {0, 1, 2, 3, 4};
 const uint8_t COLUMN_PINS[NUM_COLUMNS] = {5, 6, 7, 8, 9, 10, 15, 16, 17, 18, 19, 20, 21, 22, 23};
 
-// Bounce* buttons = new Bounce[NUM_COLUMNS * NUM_ROWS]; // TODO: button per row x column (key) instead of 
+// KEYS[row][column] is a keycode.  0 for no key.
+const uint16_t KEYS[][NUM_COLUMNS] = {
+  {KEY_TILDE, KEY_BACKSPACE, KEY_EQUAL, KEY_MINUS, KEY_0, KEY_9, KEY_ESC, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8},
+  {KEY_DELETE, KEY_BACKSLASH, KEY_RIGHT_BRACE, KEY_LEFT_BRACE, KEY_P, KEY_O, KEY_TAB, KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I},
+  {KEY_PAGE_UP, KEY_ENTER, 0, KEY_QUOTE, KEY_SEMICOLON, KEY_L, KEY_CAPS_LOCK, KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K},
+  {KEY_PAGE_DOWN, KEY_UP, MODIFIERKEY_RIGHT_SHIFT, KEY_COMMA, KEY_SLASH, KEY_PERIOD, MODIFIERKEY_LEFT_SHIFT, 0, KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M},
+  {KEY_RIGHT, KEY_DOWN, KEY_LEFT, MODIFIERKEY_RIGHT_CTRL, MODIFIERKEY_RIGHT_ALT, 0, MODIFIERKEY_LEFT_CTRL, MODIFIERKEY_LEFT_GUI, MODIFIERKEY_LEFT_ALT, 0, 0, 0, KEY_SPACE, 0, 0} // key 5 is fn
+};
+
+Bounce* buttons = new Bounce[NUM_COLUMNS * NUM_ROWS];
 
 byte keys[NUM_COLUMNS][NUM_ROWS];
 
@@ -22,126 +31,54 @@ void setup() {
   // Rows
   for (uint8_t row = 0; row < NUM_ROWS; row ++) {
     pinMode(ROW_PINS[row], INPUT);
-//    pinMode(ROW_PINS[row], OUTPUT);
-//    digitalWrite(ROW_PINS[row], HIGH);
   }
   
   // Columns
   for (uint8_t column = 0; column < NUM_COLUMNS; column ++) {
     pinMode(COLUMN_PINS[column], INPUT);
+
+    for (uint8_t row = 0; row < NUM_ROWS; row ++) {
+      buttons[buttonIndex(row, column)].attach(COLUMN_PINS[column]);
+      buttons[buttonIndex(row, column)].interval(BUTTON_INTERVAL_MS);
+    }
   }
 
-  // LED
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
+  // Keyboard
+//  Keyboard.begin();
 
   // Debugging
-  Serial.begin(9600);  
-  delay(1000); // Wait because computer may not recognize keystrokes until USB enumeration is complete.
+  Serial.begin(9600);
 }
 
 void loop() {
-  // Sketch of firmware: pins 5-10, 15-23 are columns, pins 0-4 are rows.
-  // each row: HIGH
-  // each column:
-  //  if HIGH: send Keyboard.press() on rising edge, remember
-  //  if LOW: send Keyboard.release() on falling edge, forget
-  // Keyboard.set_modifier();
-  // Libraries: Button2, Keyboard
-  // Improvements:
-  // chording: fn+[1-0-=] -> function keys
-  // macros: fn+escape -> key -> keys to record the macro -> fn+escape (record); fn+key to play - modifier to include delays or not
-  
-  digitalWrite(LED_PIN, HIGH);
-
   for (int8_t row = 0; row < NUM_ROWS; row ++) {
     // Enable the row: row -> ground without a resistor
     pinMode(ROW_PINS[row], OUTPUT);
     digitalWrite(ROW_PINS[row], LOW);
 
     for (int8_t column = 0; column < NUM_COLUMNS; column ++) {
-      // Signal the column: column -> pullup resistor.  Current will flow from the column to the row.
-      pinMode(COLUMN_PINS[column], INPUT_PULLUP);
-      keys[column][row] = digitalRead(COLUMN_PINS[column]);
-      // Disable the column: column -> high impedence
-      pinMode(COLUMN_PINS[column], INPUT);
+      uint8_t i = buttonIndex(row, column);
+      buttons[i].update();
+      if (buttons[i].rose()) {
+        printRowColumn("Rose", row, column);
+      } else if (buttons[i].fell()) {
+        printRowColumn("Fell", row, column);
+      }
     }
 
     // Disable the row: row -> high impedence
     digitalWrite(ROW_PINS[row], HIGH);
     pinMode(ROW_PINS[row], INPUT);
 
-    // Poll until no more signals are found
-    // TODO: is there a better way to do this?  without this block (or a 20ms delay), multiple rows go LOW
-    unsigned long startUS = micros();
-    unsigned long loops = 0;
-    boolean signaled = true;
-    while (signaled) {
-      loops ++;
-      signaled = false;
-      for (int8_t column = 0; column < NUM_COLUMNS; column ++) {
-        pinMode(COLUMN_PINS[column], INPUT_PULLUP);
-        if (digitalRead(COLUMN_PINS[column]) == LOW) {
-          signaled = true;
-        }
-        pinMode(COLUMN_PINS[column], INPUT);
-      }
-    }
-    unsigned long endUS = micros();
-
-    Serial.print("Done with row ");
-    Serial.print(row);
-    Serial.print(" in ");
-    Serial.print(endUS - startUS);
-    Serial.print("us - ");
-    Serial.print(loops);
-    Serial.println(" loops");
+    waitForRowComplete();
   }
-
-  Serial.println("    5  6  7  8  9 10 15 16 17 18 19 20 21 22 23");
-  for (uint8_t row = 0; row < NUM_ROWS; row ++) {
-    Serial.print(ROW_PINS[row]);
-    Serial.print(":");
-    
-    for (uint8_t column = 0; column < NUM_COLUMNS; column ++) {
-      Serial.print("  ");
-      Serial.print(keys[column][row]);
-    }
-    Serial.println("");
-  }
-  Serial.println("");
-
-/*
-  // Light up each row - columns will go LOW if the key on that row x column is pressed
-  for (uint8_t row = 0; row < NUM_ROWS; row ++) {
-    digitalWrite(ROW_PINS[row], HIGH);
-
-    // Check each of the column buttons on the row
-    for (int8_t column = 0; column < NUM_COLUMNS; column ++) {
-      int index = buttonIndex(row, column);
-      buttons[index].update();
-      if (buttons[index].rose()) {  // HIGH -> LOW - means the button was pressed
-        printRowColumn("Rose", row, column);
-      } else if (buttons[index].fell()) { // LOW -> HIGH - means the button was released
-        printRowColumn("Fell", row, column);
-      }
-    }
-
-    digitalWrite(ROW_PINS[row], LOW);
-  }
-  */
-  
-//  delay(200);
-  digitalWrite(LED_PIN, LOW);
-//  delay(800);
-  delay(500);
 }
 
 // TODO: this could be inlined by making it a define - not sure if the compiler will.
 // Returns the index of the button found at the given row and column.
 // buttons is a flat array representing all of the keys on the keyboard,
 // so this function identifies a single keyboard key in the buttons array.
-int buttonIndex(uint8_t row, uint8_t column) {
+uint8_t buttonIndex(uint8_t row, uint8_t column) {
   return row * NUM_COLUMNS + column;
 }
 
@@ -149,5 +86,22 @@ void printRowColumn(String action, uint8_t row, uint8_t column) {
   Serial.print(action + ": ");
   Serial.print(row);
   Serial.print(" x ");
-  Serial.println(column);
+  Serial.print(column);
+  Serial.print(" - ");
+  Serial.println(KEYS[row][column]);
+}
+
+// Poll until no more signals are found
+// TODO: is there a better way to do this?  without this block (or a 20ms delay), multiple rows go LOW.  
+// This block takes ~16us / row, vs 20 ms for the delay
+void waitForRowComplete() {
+  boolean signaled = true;
+    while (signaled) {
+      signaled = false;
+      for (int8_t column = 0; column < NUM_COLUMNS; column ++) {
+        pinMode(COLUMN_PINS[column], INPUT_PULLUP);
+        signaled = signaled || (digitalRead(COLUMN_PINS[column]) == LOW);
+        pinMode(COLUMN_PINS[column], INPUT);
+      }
+    }
 }
