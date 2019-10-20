@@ -4,6 +4,12 @@
 // Rows (top to bottom) are wired to pins 0-4
 // Columns (left to right) are wired to 5-10 and 15-23
 
+// Setup:
+// Install Teensyduino: https://pjrc.com/teensy/td_download.html
+// Board: Teensy 3.2/3.1
+// USB Type: Keyboard
+// Keyboard Layout: US English
+
 #include <Keyboard.h>
 #include <Bounce2.h>
 
@@ -24,10 +30,10 @@ const uint16_t KEYS[][NUM_COLUMNS] = {
 };
 
 const uint16_t FN_KEYS[][NUM_COLUMNS] = {
-  {0, 0, KEY_F12, KEY_F11, KEY_F10, KEY_F9, 0, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-  {0, KEY_PAGE_UP, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {KEY_MEDIA_PLAY_PAUSE, KEY_INSERT, KEY_F12, KEY_F11, KEY_F10, KEY_F9, 0, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6, KEY_F7, KEY_F8},
+  {KEY_MEDIA_MUTE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {KEY_MEDIA_VOLUME_INC, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+  {KEY_MEDIA_VOLUME_DEC, KEY_PAGE_UP, 0, KEY_MEDIA_STOP, KEY_MEDIA_NEXT_TRACK, KEY_MEDIA_PREV_TRACK, 0, 0, 0, 0, 0, 0, 0, 0, 0},
   {KEY_END, KEY_PAGE_DOWN, KEY_HOME, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
