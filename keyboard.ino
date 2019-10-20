@@ -4,7 +4,7 @@
 // Rows (top to bottom) are wired to pins 0-4
 // Columns (left to right) are wired to 5-10 and 15-23
 
-//#include <Keyboard.h>
+#include <Keyboard.h>
 #include <Bounce2.h>
 
 #define NUM_ROWS 5
@@ -42,7 +42,7 @@ void setup() {
   for (uint8_t row = 0; row < NUM_ROWS; row ++) {
     pinMode(ROW_PINS[row], INPUT);
   }
-  
+
   // Columns
   for (uint8_t column = 0; column < NUM_COLUMNS; column ++) {
     pinMode(COLUMN_PINS[column], INPUT);
@@ -55,9 +55,6 @@ void setup() {
 
   // Keyboard
   Keyboard.begin();
-
-  // Debugging
-  Serial.begin(9600);
 }
 
 void loop() {
@@ -70,7 +67,6 @@ void loop() {
       uint8_t i = buttonIndex(row, column);
       buttons[i].update();
       if (buttons[i].rose()) {
-        printRowColumn("Rose", row, column);
         if (isFnKey(row, column)) {
           // TODO: need to release all of the fn keys?
           fnPressed = false;
@@ -81,7 +77,6 @@ void loop() {
           }
         }
       } else if (buttons[i].fell()) {
-        printRowColumn("Fell", row, column);
         if (isFnKey(row, column)) {
           fnPressed = true;
         } else {
@@ -123,30 +118,21 @@ uint16_t keyCode(uint8_t row, uint8_t column) {
       return key;
     }
   }
-  
+
   return KEYS[row][column];
 }
 
-void printRowColumn(String action, uint8_t row, uint8_t column) {
-  Serial.print(action + ": ");
-  Serial.print(row);
-  Serial.print(" x ");
-  Serial.print(column);
-  Serial.print(" - ");
-  Serial.println(KEYS[row][column]);
-}
-
 // Poll until no more signals are found
-// TODO: is there a better way to do this?  without this block (or a 20ms delay), multiple rows go LOW.  
+// TODO: is there a better way to do this?  without this block (or a 20ms delay), multiple rows go LOW.
 // This block takes ~16us / row, vs 20 ms for the delay
 void waitForRowComplete() {
   boolean signaled = true;
-    while (signaled) {
-      signaled = false;
-      for (int8_t column = 0; column < NUM_COLUMNS; column ++) {
-        pinMode(COLUMN_PINS[column], INPUT_PULLUP);
-        signaled = signaled || (digitalRead(COLUMN_PINS[column]) == LOW);
-        pinMode(COLUMN_PINS[column], INPUT);
-      }
+  while (signaled) {
+    signaled = false;
+    for (int8_t column = 0; column < NUM_COLUMNS; column ++) {
+      pinMode(COLUMN_PINS[column], INPUT_PULLUP);
+      signaled = signaled || (digitalRead(COLUMN_PINS[column]) == LOW);
+      pinMode(COLUMN_PINS[column], INPUT);
     }
+  }
 }
